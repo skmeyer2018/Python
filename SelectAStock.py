@@ -5,13 +5,14 @@ from __future__ import (absolute_import, division, print_function,
 import datetime  # For datetime objects
 import os.path  # To manage paths
 import sys  # To find out the script name (in argv[0])
-
+from decimal import Decimal
 # Import the backtrader platform
 import backtrader as bt    
 
 import tkinter as tk
 from tkinter import *
 from tkinter import ttk
+from pathlib import Path
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -183,6 +184,7 @@ def button_click():
     txtStockInfo.delete('1.0',END)
     stockSymbolString=txtStockSymbol.get().upper()
     print ("YOU CLICKED FOR SYMBOL " + stockSymbolString )
+    portfolioValue=float(txtPortfolio.get())
     global stockInfo
     global balance
     stockInfo=""
@@ -192,6 +194,8 @@ def button_click():
     global plt
     global closeList
     global closeValues
+    #global portfolioValue
+    print ('YOUR CURRENT PORTFOLIO: %.2f' % portfolioValue )
     closeList=[]
     closeValues=[]
     
@@ -207,24 +211,29 @@ def button_click():
     # Create a Data Feed
     todaysDate=datetime.datetime.now()
     lastMonth=todaysDate + datetime.timedelta(days=-30)
+    
     try:
+        print ("GETTING DATA...")
         data = bt.feeds.YahooFinanceData(
             #dataname=datapath,
             dataname=  stockSymbolString ,
             # Do not pass values before this date
             fromdate=lastMonth,
             # Do not pass values before this date
-            todate=todaysDate,
+            todate=todaysDate  + datetime.timedelta(days=1),
             # Do not pass values after this date
             reverse=False)
     
         # Add the Data Feed to Cerebro
+        print('ADDING DATA...')
         cerebro.adddata(data)
     
         # Set our desired cash start
-        cerebro.broker.setcash(100000.0)
-        balance=100000.0
+        print("SETTING CASH...")
+        cerebro.broker.setcash(portfolioValue)
+        balance=portfolioValue
         # Print out the starting conditions
+        print("TO START PORFOLIO...")
         print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
         stockInfo += 'Starting Portfolio Value: %.2f' % cerebro.broker.getvalue() + "\n"
         # Run over everything
@@ -234,6 +243,10 @@ def button_click():
         print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())    # Plot the result
         stockInfo += 'Final Portfolio Value: %.2f' % cerebro.broker.getvalue()
         txtStockInfo.insert(tk.END, stockInfo)
+        finalPortfolioValue=cerebro.broker.getvalue()
+        fPortfolio=open('./portfolio/' + stockSymbolString + '.txt', 'w')
+        fPortfolio.write( str(finalPortfolioValue))
+        fPortfolio.close()
        # cerebro.plot(iplot=False)
 
         plt.plot(closeList, closeValues)
@@ -246,8 +259,12 @@ def button_click():
 stockInfo=""
 root = tk.Tk()
 root.title="Stock Trading"
-root.geometry("1000x800")  
+root.geometry("1200x1300")  
 root.configure(bg='#55bb22')
+lblEnterPortfolio=tk.Label(root, text="ENTER YOUR PORTFOLIO AMOUNT:", font='Arial 10 bold', bg='#55bb22')
+lblEnterPortfolio.pack()
+txtPortfolio=tk.Entry(root, font='Arial 20 bold')
+txtPortfolio.pack()
 lblEnterSymbol=tk.Label(root, text="ENTER A STOCK SYMBOL:", font='Arial 10 bold', bg='#55bb22')
 currentStep=0
 baseline=0
@@ -264,9 +281,14 @@ txtStockSymbol.pack()
 
 btnStockSymbol=tk.Button(root, text="GET STOCK INFORMATION", bg="dark gray", command=button_click)
 btnStockSymbol.pack()
-txtStockInfo=tk.Text(root, height=80, width=100, font='Arial 15 bold' )
+txtStockInfo=tk.Text(root, height=20, width=60, font='Arial 11 bold' )
 
 txtStockInfo.pack()
+portfolioList=Listbox(root)
+portfolioFile1=os.listdir('./portfolio')[0]
+for i in range(len(os.listdir('./portfolio'))):
+    portfolioList.insert(i,os.listdir('./portfolio')[i])
+portfolioList.pack()
 root.update()
 tk.mainloop()
 
