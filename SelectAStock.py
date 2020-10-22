@@ -178,6 +178,8 @@ class TestStrategy(bt.Strategy):
         global closings
         global model
         global externalRows
+        global tradeOption
+        global tradeAction
         new_model=None
         advantageEst=0
         print (str(currentStep))
@@ -324,7 +326,7 @@ class TestStrategy(bt.Strategy):
              # currentPortfolioDate=str(currentPortfolioDate)[:10] 
               todaysDate=str(todaysDate)[:10]
               print ('CURRENT PORTFOLIO DATE: ' + str(currentPortfolioDate) + " TODAYS DATE: " + str(todaysDate))        
-              csvRows=[self.datas[0].datetime.date(0), stockSymbolString, tradeAction.name,currentPrice, balance,netWorth,profit]      
+              csvRows=[self.datas[0].datetime.date(0), stockSymbolString, string(tradeAction.name),currentPrice, balance,netWorth,profit]      
               profitValues.append(profit)
               with open('./portfolio/' + portfolioFileName, 'a') as portfolioFile:
                      csvWriter=csv.writer(portfolioFile)
@@ -442,6 +444,12 @@ class TestStrategy(bt.Strategy):
                 tradeOptions={'SELL':sellOption,'HOLD':holdOption,'BUY':buyOption}
                 sortOptions=sorted(tradeOptions.items(),key=lambda x: x[1])
                 mb.showinfo("TODAY'S TRADE OPTION FOR " + stockSymbolString, "For this stock today I say " + sortOptions[0][0])
+                if sortOptions[0][0] == 'HOLD':
+                 tradeAction=tradeOption.HOLD
+                elif sortOptions[0][0] == 'BUY':
+                   tradeAction=tradeOption.BUY
+                else:
+                    tradeAction=tradeOption.SELL
                 print(todaysDate)
                 print (dt.strftime("%m/%d/%Y"))
             except:
@@ -802,22 +810,31 @@ def save_portfolio():
      global portfolioList
      global os
      global portfolioRecords
+     portfolioStringData=""
      stockSymbolString=txtStockSymbol.get().upper()
      todaysDate=datetime.datetime.now().strftime('%Y-%m-%d')
      finalPortfolioValue=float(txtPortfolio.get())
      portfolioFileName=stockSymbolString + ".csv"
-                   
+     fields=[]             
 
      if path.exists('./portfolio/' + portfolioFileName) == False:    
       fields=['Updated','Symbol','Transaction','CurrentPrice','Balance', 'Net Worth', 'Profit']
-     csvRows=[todaysDate,stockSymbolString,  '-','0.0','0.0','0.0',finalPortfolioValue,'0.0','0.0']      
+     csvRows=[todaysDate,stockSymbolString,  str(tradeAction.name), lastClosingPrice,balance,netWorth,finalPortfolioValue]      
      with open('./portfolio/' + portfolioFileName, 'a') as portfolioFileName:
          csvWriter=csv.writer(portfolioFileName)
          csvWriter.writerow(fields)
          csvWriter.writerow(csvRows)
 
      portfolioList.insert(END, stockSymbolString + '.csv')
-
+     for i in range(len(fields)):
+         portfolioStringData += fields[i] + "|"
+     portfolioStringData += "\n\r" * 2
+     for i in range(len(csvRows)):
+         portfolioStringData += str(csvRows[i]) + "|"
+     portfolioStringData += "\n\r" * 2
+     txtPortfolioData.delete('1.0',END)
+     txtPortfolioData.insert(END, portfolioStringData)   
+    
 def select_portfolio():
     global portfolioList
     global txtPortfolio
@@ -857,7 +874,7 @@ def select_portfolio():
                 if rowCount == 0:
                     portfolioSubrow += row[item].center(9) + " | "
                 else:
-                        if item == 2:
+                        if item == 4 or item == 6:
                             if row[item] != '':
                              txtPortfolio.delete(0,END)
                              txtPortfolio.insert(END, row[item])
@@ -938,19 +955,7 @@ def select_portfolio():
     print (closeValues)
     print (profitValues)
     print(modTime != todaysDate.strftime('%m/%d/%Y'))
-    if (modTime != todaysDate.strftime('%m/%d/%Y')):
-        button_click()
-    else:
-        plt.plot(closeList, closeValues)
-        plt.plot(closeList, profitValues)
-        plt.grid(True)
-        plt.show()
-    #    if str(wasBought.name) == 'YES':
-    #        lblSell.pack()
-    #        entSellAmount.pack()
-    #        rbYesSell.pack()
-    #        rbNoSell.pack()
-            
+ 
 
     gotStockDataFrom=stockDataSource.CHECKHISTORY 
 
@@ -1150,7 +1155,6 @@ buyingChoice=False
 numberOfShares=0
 netWorth=0
 profit=0
-balance=0
 buyAmount=0
 portfolioUpdated=False
 dropCount=0
